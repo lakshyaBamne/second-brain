@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Settings — Life aspects{% endblock %}
+{% block content %}
+<h1 class="text-lg font-semibold mb-4">Life aspects</h1>
+
+<form method="post" class="sb-surface rounded-2xl p-5 border mb-4 flex gap-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="text" name="name" placeholder="e.g. Health" required class="flex-1 rounded-lg border bg-transparent px-3 py-2" style="border-color: var(--border)">
+  <button type="submit" class="rounded-lg px-4 py-2 font-medium text-white" style="background: #2a78d6">Add aspect</button>
+</form>
+
+<div class="space-y-2">
+  {% for aspect in aspects %}
+  <div class="sb-surface rounded-2xl p-4 border flex items-center gap-3">
+    <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {{ aspect.color_light }}"></span>
+    <form method="post" action="{{ url_for('settings.rename_aspect', aspect_id=aspect._id) }}" class="flex-1 flex gap-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="text" name="name" value="{{ aspect.name }}" class="flex-1 rounded-lg border bg-transparent px-2 py-1 text-sm" style="border-color: var(--border)">
+      <button type="submit" class="text-xs shrink-0" style="color: var(--ink-secondary)">Save</button>
+    </form>
+    <form method="post" action="{{ url_for('settings.delete_aspect', aspect_id=aspect._id) }}" onsubmit="return confirm('Delete this aspect and all of its metrics/entries?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="text-xs text-red-600">Delete</button>
+    </form>
+  </div>
+  {% else %}
+  <p class="text-sm" style="color: var(--ink-muted)">No life aspects yet — add your first one above.</p>
+  {% endfor %}
+</div>
+
+<p class="text-sm mt-4"><a href="{{ url_for('settings.metrics') }}" class="underline">Manage metrics &rarr;</a></p>
+{% endblock %}

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Second Brain{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --surface: #fcfcfb;
+      --page: #f9f9f7;
+      --ink-primary: #0b0b0b;
+      --ink-secondary: #52514e;
+      --ink-muted: #898781;
+      --gridline: #e1e0d9;
+      --baseline: #c3c2b7;
+      --border: rgba(11,11,11,0.10);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --surface: #1a1a19;
+        --page: #0d0d0d;
+        --ink-primary: #ffffff;
+        --ink-secondary: #c3c2b7;
+        --ink-muted: #898781;
+        --gridline: #2c2c2a;
+        --baseline: #383835;
+        --border: rgba(255,255,255,0.10);
+      }
+    }
+    body { background: var(--page); color: var(--ink-primary); }
+    .sb-surface { background: var(--surface); border-color: var(--border) !important; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen">
+  {% if current_user.is_authenticated %}
+  <nav class="sb-surface border-b">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
+      <span class="font-semibold">Second Brain</span>
+      <a href="{{ url_for('dashboard.home') }}" class="text-sm" style="color: var(--ink-secondary)">Dashboard</a>
+      <a href="{{ url_for('daily.today') }}" class="text-sm" style="color: var(--ink-secondary)">Today</a>
+      <a href="{{ url_for('reviews.history') }}" class="text-sm" style="color: var(--ink-secondary)">Reviews</a>
+      <a href="{{ url_for('settings.aspects') }}" class="text-sm" style="color: var(--ink-secondary)">Settings</a>
+      <form method="post" action="{{ url_for('auth.logout') }}" class="ml-auto">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="text-sm" style="color: var(--ink-secondary)">Log out</button>
+      </form>
+    </div>
+  </nav>
+  {% endif %}
+
+  <main class="max-w-5xl mx-auto px-4 py-6">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-4 space-y-2">
+        {% for category, message in messages %}
+          <div class="rounded-lg px-4 py-2 text-sm {{ 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200' if category == 'error' else 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200' }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

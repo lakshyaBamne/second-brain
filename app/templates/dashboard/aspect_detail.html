@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ aspect.name }} — Second Brain{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+  <div class="flex items-center gap-2">
+    <span class="w-3 h-3 rounded-full" style="background: {{ aspect.color_light }}"></span>
+    <h1 class="text-lg font-semibold">{{ aspect.name }}</h1>
+  </div>
+  <div class="flex gap-1 text-sm">
+    {% for key, label in [('week','Week'), ('month','Month'), ('quarter','Quarter'), ('all','All time')] %}
+    <a href="?range={{ key }}" class="px-2.5 py-1 rounded-lg {{ 'text-white' if key == range_key else '' }}"
+       style="{{ 'background: ' + aspect.color_light if key == range_key else 'color: var(--ink-secondary)' }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+{% if not metric_charts %}
+<div class="sb-surface rounded-2xl p-6 border text-sm" style="color: var(--ink-secondary)">
+  No metrics in this aspect yet. Add one in <a href="{{ url_for('settings.metrics') }}" class="underline">Settings</a>.
+</div>
+{% endif %}
+
+<div class="space-y-4">
+  {% for item in metric_charts %}
+  <div class="sb-surface rounded-2xl p-5 border">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-medium">{{ item.metric.name }}{% if item.metric.unit %} <span class="text-sm font-normal" style="color: var(--ink-muted)">({{ item.metric.unit }})</span>{% endif %}</h2>
+      {% if item.status %}
+      <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+            style="background: {{ '#0ca30c1a' if item.status == 'good' else '#fab2191a' }}; color: {{ '#0ca30c' if item.status == 'good' else '#a86200' }}">
+        {{ 'On track' if item.status == 'good' else 'Needs attention' }}
+      </span>
+      {% endif %}
+    </div>
+    {% if item.series %}
+    <div style="height: 220px"><canvas id="chart-{{ item.metric._id }}"></canvas></div>
+    {% else %}
+    <p class="text-sm" style="color: var(--ink-muted)">No entries yet for this period.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  {% for item in metric_charts %}
+  {% if item.series %}
+  SecondBrain.lineChart("chart-{{ item.metric._id }}", {{ item.series | tojson }}, "{{ aspect.color_light }}", "{{ aspect.color_dark }}", {{ (item.metric.type == 'boolean') | tojson }});
+  {% endif %}
+  {% endfor %}
+</script>
+{% endblock %}

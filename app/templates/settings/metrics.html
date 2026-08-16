@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Settings — Metrics{% endblock %}
+{% block content %}
+<h1 class="text-lg font-semibold mb-4">Metrics</h1>
+
+{% if not aspects %}
+<p class="text-sm" style="color: var(--ink-muted)">Add a <a href="{{ url_for('settings.aspects') }}" class="underline">life aspect</a> first.</p>
+{% else %}
+<form method="post" class="sb-surface rounded-2xl p-5 border mb-6 grid gap-3 sm:grid-cols-2">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <select name="aspect_id" required class="rounded-lg border bg-transparent px-3 py-2" style="border-color: var(--border)">
+    {% for aspect in aspects %}
+    <option value="{{ aspect._id }}">{{ aspect.name }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" name="name" placeholder="Metric name, e.g. Expenditures" required class="rounded-lg border bg-transparent px-3 py-2" style="border-color: var(--border)">
+  <select name="type" required class="rounded-lg border bg-transparent px-3 py-2" style="border-color: var(--border)">
+    {% for t in types %}<option value="{{ t }}">{{ t|capitalize }}</option>{% endfor %}
+  </select>
+  <select name="cadence" required class="rounded-lg border bg-transparent px-3 py-2" style="border-color: var(--border)">
+    {% for c in cadences %}<option value="{{ c }}">{{ c|capitalize }}</option>{% endfor %}
+  </select>
+  <input type="text" name="unit" placeholder="Unit (optional), e.g. currency, hours" class="rounded-lg border bg-transparent px-3 py-2" style="border-color: var(--border)">
+  <div class="flex gap-2">
+    <input type="number" step="any" name="target_value" placeholder="Target (optional)" class="flex-1 rounded-lg border bg-transparent px-3 py-2" style="border-color: var(--border)">
+    <select name="target_direction" class="rounded-lg border bg-transparent px-3 py-2" style="border-color: var(--border)">
+      <option value="">—</option>
+      <option value="at_least">At least</option>
+      <option value="at_most">At most</option>
+    </select>
+  </div>
+  <button type="submit" class="sm:col-span-2 rounded-lg py-2 font-medium text-white" style="background: #2a78d6">Add metric</button>
+</form>
+
+{% for group in grouped %}
+<div class="mb-4">
+  <div class="flex items-center gap-2 mb-2">
+    <span class="w-2.5 h-2.5 rounded-full" style="background: {{ group.aspect.color_light }}"></span>
+    <h2 class="font-medium">{{ group.aspect.name }}</h2>
+  </div>
+  <div class="space-y-2">
+    {% for metric in group.metrics %}
+    <div class="sb-surface rounded-2xl p-3 border flex items-center gap-3 {{ 'opacity-50' if not metric.active else '' }}">
+      <div class="flex-1">
+        <div class="text-sm font-medium">{{ metric.name }} <span class="text-xs font-normal" style="color: var(--ink-muted)">{{ metric.type }} · {{ metric.cadence }}{% if metric.unit %} · {{ metric.unit }}{% endif %}</span></div>
+      </div>
+      {% if metric.active %}
+      <form method="post" action="{{ url_for('settings.archive_metric', metric_id=metric._id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="text-xs" style="color: var(--ink-secondary)">Archive</button>
+      </form>
+      {% else %}
+      <form method="post" action="{{ url_for('settings.reactivate_metric', metric_id=metric._id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="text-xs" style="color: var(--ink-secondary)">Reactivate</button>
+      </form>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="text-sm" style="color: var(--ink-muted)">No metrics yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

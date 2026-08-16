@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Today — Second Brain{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <div class="flex items-center gap-3 text-sm">
+    <a href="{{ url_for('daily.today', date=prev_date.isoformat()) }}" style="color: var(--ink-secondary)">&larr;</a>
+    <span class="font-semibold">{{ the_date.strftime('%A, %B %d, %Y') }}{% if the_date == today %} (Today){% endif %}</span>
+    <a href="{{ url_for('daily.today', date=next_date.isoformat()) }}" style="color: var(--ink-secondary)">&rarr;</a>
+  </div>
+  {% if total %}<span class="text-sm" style="color: var(--ink-secondary)">{{ logged }}/{{ total }} logged</span>{% endif %}
+</div>
+
+{% if not groups %}
+<div class="sb-surface rounded-2xl p-6 border text-sm" style="color: var(--ink-secondary)">
+  No daily metrics yet. Add some in <a href="{{ url_for('settings.metrics') }}" class="underline">Settings</a>.
+</div>
+{% else %}
+<form method="post" class="space-y-6">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="date" value="{{ the_date.isoformat() }}">
+  {% for group in groups %}
+  <div class="sb-surface rounded-2xl p-5 border">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="w-2.5 h-2.5 rounded-full" style="background: {{ group.aspect.color_light }}"></span>
+      <h2 class="font-semibold">{{ group.aspect.name }}</h2>
+    </div>
+    <div class="space-y-3">
+      {% for row in group.rows %}
+      <div class="flex items-center justify-between gap-4">
+        <label class="text-sm">{{ row.metric.name }}{% if row.metric.unit %} <span style="color: var(--ink-muted)">({{ row.metric.unit }})</span>{% endif %}</label>
+        {% if row.metric.type == 'boolean' %}
+        <input type="checkbox" name="metric_{{ row.metric._id }}" {% if row.value %}checked{% endif %} class="w-5 h-5" style="accent-color: {{ group.aspect.color_light }}">
+        {% elif row.metric.type == 'rating' %}
+        <div class="flex gap-2">
+          {% for n in range(1, 6) %}
+          <label class="text-xs flex flex-col items-center gap-1" style="color: var(--ink-secondary)">
+            <input type="radio" name="metric_{{ row.metric._id }}" value="{{ n }}" {% if row.value == n %}checked{% endif %} style="accent-color: {{ group.aspect.color_light }}">
+            {{ n }}
+          </label>
+          {% endfor %}
+        </div>
+        {% else %}
+        <input type="number" step="any" name="metric_{{ row.metric._id }}" value="{{ row.value if row.value is not none else '' }}" class="w-28 rounded-lg border bg-transparent px-3 py-1.5 text-right" style="border-color: var(--border)">
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  <button type="submit" class="w-full rounded-lg py-2.5 font-medium text-white" style="background: #2a78d6">Save today's entries</button>
+</form>
+{% endif %}
+{% endblock %}

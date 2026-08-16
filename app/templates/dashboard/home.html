@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Second Brain{% endblock %}
+{% block content %}
+<h1 class="text-lg font-semibold mb-4">Dashboard</h1>
+{% if not cards %}
+<div class="sb-surface rounded-2xl p-6 border text-sm" style="color: var(--ink-secondary)">
+  No life aspects yet. Add one in <a href="{{ url_for('settings.aspects') }}" class="underline">Settings</a>.
+</div>
+{% else %}
+<div class="grid gap-4 sm:grid-cols-2">
+  {% for card in cards %}
+  <a href="{{ url_for('dashboard.aspect_detail', slug=card.aspect.slug) }}" class="sb-surface rounded-2xl p-5 border block hover:opacity-90">
+    <div class="flex items-center justify-between mb-2">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full" style="background: {{ card.aspect.color_light }}"></span>
+        <h2 class="font-semibold">{{ card.aspect.name }}</h2>
+      </div>
+      {% if card.status %}
+      <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+            style="background: {{ '#0ca30c1a' if card.status == 'good' else '#fab2191a' }}; color: {{ '#0ca30c' if card.status == 'good' else '#a86200' }}">
+        {{ 'On track' if card.status == 'good' else 'Needs attention' }}
+      </span>
+      {% endif %}
+    </div>
+    {% if card.headline %}
+    <div class="flex items-end justify-between gap-3">
+      <div>
+        <div class="text-2xl font-semibold">{{ '%.2f'|format(card.latest) if card.latest is not none else '—' }}
+          <span class="text-sm font-normal" style="color: var(--ink-muted)">{{ card.headline.unit }}</span>
+        </div>
+        <div class="text-xs" style="color: var(--ink-muted)">{{ card.headline.name }}</div>
+      </div>
+      <canvas id="spark-{{ card.aspect._id }}" width="120" height="40"></canvas>
+    </div>
+    {% else %}
+    <p class="text-sm" style="color: var(--ink-muted)">No metrics yet.</p>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  {% for card in cards %}
+  {% if card.headline %}
+  SecondBrain.sparkline("spark-{{ card.aspect._id }}", {{ card.series | tojson }}, "{{ card.aspect.color_light }}", "{{ card.aspect.color_dark }}");
+  {% endif %}
+  {% endfor %}
+</script>
+{% endblock %}

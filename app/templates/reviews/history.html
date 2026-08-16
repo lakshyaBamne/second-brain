@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Reviews — Second Brain{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-lg font-semibold">Monthly reviews</h1>
+  <a href="{{ url_for('reviews.review', period=current_month.strftime('%Y-%m')) }}" class="text-sm rounded-lg px-3 py-1.5 text-white" style="background: #2a78d6">
+    This month's review
+  </a>
+</div>
+{% if not reviews %}
+<div class="sb-surface rounded-2xl p-6 border text-sm" style="color: var(--ink-secondary)">
+  No reviews yet.
+</div>
+{% else %}
+<div class="space-y-3">
+  {% for r in reviews %}
+  <a href="{{ url_for('reviews.review', period=r.period_start.strftime('%Y-%m')) }}" class="sb-surface rounded-2xl p-4 border block">
+    <div class="font-medium">{{ r.period_start.strftime('%B %Y') }}</div>
+    <div class="text-xs" style="color: var(--ink-muted)">Completed {{ r.completed_at.strftime('%b %d, %Y') }}</div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
