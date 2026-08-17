@@ -11,3 +11,4 @@ def ensure_indexes(db):
     db.reviews.create_index([("period_type", 1), ("period_start", 1)], unique=True)
     db.users.create_index("email", unique=True)
     db.life_aspects.create_index("slug", unique=True)
+    db.transactions.create_index([("aspect_id", 1), ("date", 1)])

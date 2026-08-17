@@ -1,5 +1,7 @@
 """One-time setup: creates your login and seeds the Finances life aspect
-with its starting metrics (see the v1.0.0 design doc, section 3)."""
+(transaction-tracking enabled) with its one manual monthly metric, In-hand
+money. Expenditure/Savings/Investments/Current debt are tracked via the
+transaction log on the Today page instead."""
 
 import os
 from getpass import getpass
@@ -14,11 +16,7 @@ from app.models.metrics import create_metric, list_metrics  # noqa: E402
 from app.models.users import any_user_exists, create_user  # noqa: E402
 
 SEED_METRICS = [
-    ("Expenditures", "number", "daily", "currency", None),
     ("In-hand money", "number", "monthly", "currency", None),
-    ("Savings", "number", "monthly", "currency", None),
-    ("Investments", "number", "monthly", "currency", None),
-    ("Current debt", "number", "monthly", "currency", None),
 ]
 
 
@@ -41,8 +39,12 @@ def main():
     if aspect:
         print("Finances aspect already exists — skipping.")
     else:
-        aspect = create_aspect(db, "Finances")
-        print("Created life aspect: Finances")
+        finances_config = {
+            "amount_label": "Amount",
+            "categories": ["Expenditure", "Savings", "Investments", "Debt"],
+        }
+        aspect = create_aspect(db, "Finances", transaction_config=finances_config)
+        print("Created life aspect: Finances (quick-add log enabled)")
 
     existing_names = {m["name"] for m in list_metrics(db, aspect_id=aspect["_id"], active_only=False)}
     for name, type_, cadence, unit, target in SEED_METRICS:

@@ -6,6 +6,7 @@ from flask_login import login_required
 from app.models import entries as entries_model
 from app.models import life_aspects
 from app.models import metrics as metrics_model
+from app.models import transactions as transactions_model
 
 daily_bp = Blueprint("daily", __name__, url_prefix="/today")
 
@@ -29,11 +30,25 @@ def today():
     groups = []
     for aspect in life_aspects.list_aspects(db):
         daily_metrics = metrics_model.list_metrics(db, aspect_id=aspect["_id"], cadence="daily")
-        if not daily_metrics:
+        rows = []
+        if daily_metrics:
+            existing = entries_model.entries_for_metrics_on(db, [m["_id"] for m in daily_metrics], day)
+            rows = [{"metric": m, "value": existing.get(str(m["_id"]), {}).get("value")} for m in daily_metrics]
+
+        transaction_config = aspect.get("transaction_config")
+        if not rows and not transaction_config:
             continue
-        existing = entries_model.entries_for_metrics_on(db, [m["_id"] for m in daily_metrics], day)
-        rows = [{"metric": m, "value": existing.get(str(m["_id"]), {}).get("value")} for m in daily_metrics]
-        groups.append({"aspect": aspect, "rows": rows})
+
+        groups.append(
+            {
+                "aspect": aspect,
+                "rows": rows,
+                "transaction_config": transaction_config,
+                "transactions": transactions_model.transactions_for_day(db, aspect["_id"], day)
+                if transaction_config
+                else [],
+            }
+        )
 
     logged = sum(1 for g in groups for r in g["rows"] if r["value"] is not None)
     total = sum(len(g["rows"]) for g in groups)
@@ -69,5 +84,27 @@ def save_today():
                 value = int(raw) if metric["type"] == "rating" else float(raw)
             entries_model.upsert_entry(db, metric["_id"], day, value)
 
+        transaction_config = aspect.get("transaction_config")
+        if transaction_config:
+            valid_categories = set(transaction_config.get("categories", []))
+            count = int(request.form.get(f"txn_count_{aspect['_id']}", 0) or 0)
+            for i in range(count):
+                prefix = f"txn_{aspect['_id']}_{i}_"
+                name = request.form.get(prefix + "name", "").strip()
+                amount_raw = request.form.get(prefix + "amount", "")
+                category = request.form.get(prefix + "category", "")
+                if not name or not amount_raw or category not in valid_categories:
+                    continue
+                description = request.form.get(prefix + "description", "").strip()
+                transactions_model.add_transaction(db, aspect["_id"], day, name, description, float(amount_raw), category)
+
     flash("Saved today's entries.", "success")
     return redirect(url_for("daily.today", date=the_date.isoformat()))
+
+
+@daily_bp.route("/transactions/<transaction_id>/delete", methods=["POST"])
+@login_required
+def delete_transaction(transaction_id):
+    transactions_model.delete_transaction(current_app.db, transaction_id)
+    redirect_date = request.form.get("date", date.today().isoformat())
+    return redirect(url_for("daily.today", date=redirect_date))

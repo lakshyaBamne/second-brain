@@ -7,17 +7,45 @@ from app.models import metrics as metrics_model
 settings_bp = Blueprint("settings", __name__, url_prefix="/settings")
 
 
+def _parse_transaction_config(form):
+    """Build a transaction_config dict from the shared add/edit form fields,
+    or None if the log isn't enabled / no valid categories were given."""
+    if "enable_transactions" not in form:
+        return None
+    seen = set()
+    categories = []
+    for raw in form.get("categories", "").split(","):
+        name = raw.strip()
+        if name and name not in seen:
+            seen.add(name)
+            categories.append(name)
+    if not categories:
+        return None
+    amount_label = form.get("amount_label", "").strip() or "Amount"
+    return {"amount_label": amount_label, "categories": categories}
+
+
 @settings_bp.route("/aspects", methods=["GET", "POST"])
 @login_required
 def aspects():
     db = current_app.db
     if request.method == "POST":
         name = request.form.get("name", "").strip()
+        transaction_config = _parse_transaction_config(request.form)
         if name:
-            life_aspects.create_aspect(db, name)
+            life_aspects.create_aspect(db, name, transaction_config=transaction_config)
             flash(f'Added life aspect "{name}".', "success")
         return redirect(url_for("settings.aspects"))
     return render_template("settings/aspects.html", aspects=life_aspects.list_aspects(db))
+
+
+@settings_bp.route("/aspects/<aspect_id>/transaction_config", methods=["POST"])
+@login_required
+def update_transaction_config(aspect_id):
+    transaction_config = _parse_transaction_config(request.form)
+    life_aspects.update_transaction_config(current_app.db, aspect_id, transaction_config)
+    flash("Updated quick-add log settings.", "success")
+    return redirect(url_for("settings.aspects"))
 
 
 @settings_bp.route("/aspects/<aspect_id>/rename", methods=["POST"])

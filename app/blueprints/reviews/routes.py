@@ -7,6 +7,7 @@ from app.models import entries as entries_model
 from app.models import life_aspects
 from app.models import metrics as metrics_model
 from app.models import reviews as reviews_model
+from app.models import transactions as transactions_model
 
 reviews_bp = Blueprint("reviews", __name__, url_prefix="/reviews")
 
@@ -102,11 +103,27 @@ def review(period):
             )
             if metric["cadence"] == "monthly":
                 monthly_inputs.append({"metric": metric, "value": this_month[0]["value"] if this_month else None})
+
+        transaction_summary = None
+        transaction_config = aspect.get("transaction_config")
+        if transaction_config:
+            categories = transaction_config.get("categories", [])
+            this_totals = transactions_model.totals_by_category(db, aspect["_id"], categories, month_start, month_end)
+            last_totals = transactions_model.totals_by_category(db, aspect["_id"], categories, prev_start, month_start)
+            transaction_summary = {
+                "amount_label": transaction_config.get("amount_label", "Amount"),
+                "labels": categories,
+                "this_month": [this_totals[c] for c in categories],
+                "last_month": [last_totals[c] for c in categories],
+                "totals": [(c, this_totals[c]) for c in categories],
+            }
+
         aspect_sections.append(
             {
                 "aspect": aspect,
                 "metrics": metric_summaries,
                 "monthly_inputs": monthly_inputs,
+                "transaction_summary": transaction_summary,
                 "existing": existing_by_aspect.get(str(aspect["_id"]), {}),
             }
         )

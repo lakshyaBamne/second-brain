@@ -22,7 +22,7 @@ def get_aspect_by_slug(db, slug):
     return db.life_aspects.find_one({"slug": slug})
 
 
-def create_aspect(db, name, icon=""):
+def create_aspect(db, name, icon="", transaction_config=None):
     order = db.life_aspects.count_documents({})
     color = slot_for_order(order)
     slug = _slugify(name)
@@ -37,6 +37,8 @@ def create_aspect(db, name, icon=""):
         "color_dark": color["dark"],
         "icon": icon,
         "order": order,
+        # None = no quick-add log; otherwise { amount_label, categories: [str, ...] }
+        "transaction_config": transaction_config,
     }
     result = db.life_aspects.insert_one(doc)
     doc["_id"] = result.inserted_id
@@ -47,9 +49,14 @@ def update_aspect(db, aspect_id, updates):
     db.life_aspects.update_one({"_id": ObjectId(aspect_id)}, {"$set": updates})
 
 
+def update_transaction_config(db, aspect_id, transaction_config):
+    db.life_aspects.update_one({"_id": ObjectId(aspect_id)}, {"$set": {"transaction_config": transaction_config}})
+
+
 def delete_aspect(db, aspect_id):
     aid = ObjectId(aspect_id)
     metric_ids = [m["_id"] for m in db.metrics.find({"aspect_id": aid}, {"_id": 1})]
     db.entries.delete_many({"metric_id": {"$in": metric_ids}})
     db.metrics.delete_many({"aspect_id": aid})
+    db.transactions.delete_many({"aspect_id": aid})
     db.life_aspects.delete_one({"_id": aid})

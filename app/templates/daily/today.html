@@ -24,6 +24,7 @@
       <span class="w-2.5 h-2.5 rounded-full" style="background: {{ group.aspect.color_light }}"></span>
       <h2 class="font-semibold">{{ group.aspect.name }}</h2>
     </div>
+    {% if group.rows %}
     <div class="space-y-3">
       {% for row in group.rows %}
       <div class="flex items-center justify-between gap-4">
@@ -45,9 +46,64 @@
       </div>
       {% endfor %}
     </div>
+    {% endif %}
+
+    {% if group.transaction_config %}
+    <div class="{{ 'mt-4 pt-4 border-t' if group.rows else '' }}" style="border-color: var(--border)">
+      <h3 class="text-sm font-medium mb-2" style="color: var(--ink-secondary)">Transactions</h3>
+
+      {% if group.transactions %}
+      <div class="space-y-1 mb-3">
+        {% for txn in group.transactions %}
+        <div class="flex items-center justify-between gap-2 text-sm rounded-lg px-3 py-2" style="background: var(--page)">
+          <div class="flex-1 min-w-0 truncate">
+            <span class="font-medium">{{ txn.name }}</span>
+            {% if txn.description %}<span style="color: var(--ink-muted)"> — {{ txn.description }}</span>{% endif %}
+          </div>
+          <span class="text-xs px-2 py-0.5 rounded-full shrink-0" style="color: var(--ink-secondary); border: 1px solid var(--border)">{{ txn.category }}</span>
+          <span class="font-medium shrink-0">{{ '%.2f'|format(txn.amount) }}</span>
+          <form method="post" action="{{ url_for('daily.delete_transaction', transaction_id=txn._id) }}" class="shrink-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="date" value="{{ the_date.isoformat() }}">
+            <button type="submit" class="text-sm leading-none" style="color: var(--ink-muted)" aria-label="Delete transaction">&times;</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="grid gap-2 sm:grid-cols-[2fr_2fr_1fr_1fr_auto] items-end" data-txn-form data-aspect-id="{{ group.aspect._id }}">
+        <div>
+          <label class="block text-xs mb-1" style="color: var(--ink-muted)">Name</label>
+          <input type="text" data-txn-field="name" class="w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm" style="border-color: var(--border)">
+        </div>
+        <div>
+          <label class="block text-xs mb-1" style="color: var(--ink-muted)">Description</label>
+          <input type="text" data-txn-field="description" class="w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm" style="border-color: var(--border)">
+        </div>
+        <div>
+          <label class="block text-xs mb-1" style="color: var(--ink-muted)">{{ group.transaction_config.amount_label }}</label>
+          <input type="number" step="0.01" data-txn-field="amount" class="w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm" style="border-color: var(--border)">
+        </div>
+        <div>
+          <label class="block text-xs mb-1" style="color: var(--ink-muted)">Category</label>
+          <select data-txn-field="category" class="w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm" style="border-color: var(--border)">
+            {% for cat in group.transaction_config.categories %}
+            <option value="{{ cat }}">{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="button" data-txn-add class="rounded-lg px-3 py-1.5 text-sm font-medium text-white" style="background: {{ group.aspect.color_light }}">+</button>
+      </div>
+
+      <div data-txn-staged class="mt-2 space-y-1"></div>
+      <input type="hidden" name="txn_count_{{ group.aspect._id }}" value="0" data-txn-count>
+    </div>
+    {% endif %}
   </div>
   {% endfor %}
   <button type="submit" class="w-full rounded-lg py-2.5 font-medium text-white" style="background: #2a78d6">Save today's entries</button>
 </form>
+<script src="{{ url_for('static', filename='js/transactions.js') }}"></script>
 {% endif %}
 {% endblock %}

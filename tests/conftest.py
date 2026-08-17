@@ -26,15 +26,20 @@ def client(app):
     return app.test_client()
 
 
+FINANCE_TRANSACTION_CONFIG = {
+    "amount_label": "Amount",
+    "categories": ["Expenditure", "Savings", "Investments", "Debt"],
+}
+
+
 @pytest.fixture
 def seeded(db):
     create_user(db, "test@example.com", "password123")
-    aspect = create_aspect(db, "Finances")
-    daily_metric = create_metric(db, aspect["_id"], "Expenditures", "number", "daily", "currency")
+    aspect = create_aspect(db, "Finances", transaction_config=FINANCE_TRANSACTION_CONFIG)
     monthly_metric = create_metric(
-        db, aspect["_id"], "Savings", "number", "monthly", "currency", {"value": 500, "direction": "at_least"}
+        db, aspect["_id"], "In-hand money", "number", "monthly", "currency", {"value": 500, "direction": "at_least"}
     )
-    return {"aspect": aspect, "daily_metric": daily_metric, "monthly_metric": monthly_metric}
+    return {"aspect": aspect, "monthly_metric": monthly_metric}
 
 
 @pytest.fixture

@@ -27,12 +27,16 @@ frontend build step.
    ```
 3. **Config** — copy `.env.example` to `.env` and fill in `MONGO_URI` (and a
    random `SECRET_KEY`).
-4. **Seed data** — creates your login plus the Finances aspect and its
-   starting metrics (Expenditures, In-hand money, Savings, Investments,
-   Current debt):
+4. **Seed data** — creates your login plus the Finances aspect (transaction
+   tracking enabled) and its one manual metric, In-hand money:
    ```
    python seed.py
    ```
+   If you're upgrading a database seeded before the transaction-log rework,
+   run `python migrate_transactions.py` instead/first — it flips on
+   transaction tracking for Finances and archives (not deletes) the old
+   Expenditures/Savings/Investments/Current debt metrics, keeping their
+   history intact.
 5. **Run**
    ```
    python wsgi.py
@@ -52,6 +56,14 @@ connection is needed to run them.
 
 Settings → Life aspects / Metrics — no code changes needed. New aspects are
 assigned the next color in a validated, colorblind-safe palette automatically.
+
+Check "Enable a quick-add log" when adding an aspect (or later, via each
+aspect's "Quick-add log settings") to give it its own add-a-transaction
+(name/description/amount/category) flow on the Today page, collated by
+category in monthly reviews. Both the categories and what the amount
+represents are fully custom per aspect — e.g. Finances uses
+Expenditure/Savings/Investments/Debt in currency, a Health aspect might use
+Gym/Sports/Others in hours.
 
 ## Deploying (when ready)
 

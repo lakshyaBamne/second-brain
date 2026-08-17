@@ -107,5 +107,27 @@ window.SecondBrain = (function () {
     });
   }
 
-  return { sparkline, lineChart, comparisonBar };
+  function categoryBar(canvasId, labels, totals, colorLight, colorDark) {
+    const el = document.getElementById(canvasId);
+    if (!el) return;
+    const color = pick(colorLight, colorDark);
+    new Chart(el, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{ data: totals, backgroundColor: color, borderRadius: 4, maxBarThickness: 32 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: muted() } },
+          y: { grid: { color: gridline(), drawTicks: false }, ticks: { color: muted() } },
+        },
+      },
+    });
+  }
+
+  return { sparkline, lineChart, comparisonBar, categoryBar };
 })();

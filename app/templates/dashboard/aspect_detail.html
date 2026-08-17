@@ -14,9 +14,24 @@
   </div>
 </div>
 
-{% if not metric_charts %}
+{% if not metric_charts and not transaction_summary %}
 <div class="sb-surface rounded-2xl p-6 border text-sm" style="color: var(--ink-secondary)">
   No metrics in this aspect yet. Add one in <a href="{{ url_for('settings.metrics') }}" class="underline">Settings</a>.
+</div>
+{% endif %}
+
+{% if transaction_summary %}
+<div class="sb-surface rounded-2xl p-5 border mb-4">
+  <h2 class="font-medium mb-3">{{ transaction_summary.amount_label }}, by category</h2>
+  <div style="height: 200px" class="mb-3"><canvas id="txn-chart-{{ aspect._id }}"></canvas></div>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+    {% for label, total in transaction_summary.totals %}
+    <div class="rounded-lg px-3 py-2" style="background: var(--page)">
+      <div class="text-xs" style="color: var(--ink-muted)">{{ label }}</div>
+      <div class="font-semibold">{{ '%.2f'|format(total) }}</div>
+    </div>
+    {% endfor %}
+  </div>
 </div>
 {% endif %}
 
@@ -43,6 +58,15 @@
 
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 <script>
+  {% if transaction_summary %}
+  SecondBrain.categoryBar(
+    "txn-chart-{{ aspect._id }}",
+    {{ transaction_summary.labels | tojson }},
+    {{ transaction_summary.amounts | tojson }},
+    "{{ aspect.color_light }}",
+    "{{ aspect.color_dark }}"
+  );
+  {% endif %}
   {% for item in metric_charts %}
   {% if item.series %}
   SecondBrain.lineChart("chart-{{ item.metric._id }}", {{ item.series | tojson }}, "{{ aspect.color_light }}", "{{ aspect.color_dark }}", {{ (item.metric.type == 'boolean') | tojson }});

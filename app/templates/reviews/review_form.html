@@ -12,6 +12,19 @@
       <h2 class="font-semibold">{{ section.aspect.name }}</h2>
     </div>
 
+    {% if section.transaction_summary %}
+    <div class="text-xs mb-1" style="color: var(--ink-muted)">{{ section.transaction_summary.amount_label }}, by category</div>
+    <div style="height: 180px" class="mb-3"><canvas id="txn-chart-{{ section.aspect._id }}"></canvas></div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-sm">
+      {% for label, total in section.transaction_summary.totals %}
+      <div class="rounded-lg px-3 py-2" style="background: var(--page)">
+        <div class="text-xs" style="color: var(--ink-muted)">{{ label }}</div>
+        <div class="font-semibold">{{ '%.2f'|format(total) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     {% if section.metrics %}
     <div style="height: 180px" class="mb-4"><canvas id="review-chart-{{ section.aspect._id }}"></canvas></div>
     {% endif %}
@@ -43,6 +56,16 @@
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 <script>
   {% for section in aspect_sections %}
+  {% if section.transaction_summary %}
+  SecondBrain.comparisonBar(
+    "txn-chart-{{ section.aspect._id }}",
+    {{ section.transaction_summary.labels | tojson }},
+    {{ section.transaction_summary.last_month | tojson }},
+    {{ section.transaction_summary.this_month | tojson }},
+    "{{ section.aspect.color_light }}",
+    "{{ section.aspect.color_dark }}"
+  );
+  {% endif %}
   {% if section.metrics %}
   SecondBrain.comparisonBar(
     "review-chart-{{ section.aspect._id }}",

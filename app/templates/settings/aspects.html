@@ -3,25 +3,63 @@
 {% block content %}
 <h1 class="text-lg font-semibold mb-4">Life aspects</h1>
 
-<form method="post" class="sb-surface rounded-2xl p-5 border mb-4 flex gap-3">
+<form method="post" class="sb-surface rounded-2xl p-5 border mb-4 space-y-3">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <input type="text" name="name" placeholder="e.g. Health" required class="flex-1 rounded-lg border bg-transparent px-3 py-2" style="border-color: var(--border)">
-  <button type="submit" class="rounded-lg px-4 py-2 font-medium text-white" style="background: #2a78d6">Add aspect</button>
+  <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+    <input type="text" name="name" placeholder="e.g. Health" required class="flex-1 rounded-lg border bg-transparent px-3 py-2" style="border-color: var(--border)">
+    <button type="submit" class="rounded-lg px-4 py-2 font-medium text-white shrink-0" style="background: #2a78d6">Add aspect</button>
+  </div>
+  <label class="text-sm flex items-center gap-2" style="color: var(--ink-secondary)">
+    <input type="checkbox" name="enable_transactions">
+    Enable a quick-add log for this aspect
+  </label>
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div>
+      <label class="block text-xs mb-1" style="color: var(--ink-muted)">What does the amount represent? (e.g. Amount, Hours)</label>
+      <input type="text" name="amount_label" placeholder="Amount" class="w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm" style="border-color: var(--border)">
+    </div>
+    <div>
+      <label class="block text-xs mb-1" style="color: var(--ink-muted)">Categories (comma-separated)</label>
+      <input type="text" name="categories" placeholder="Gym, Sports, Others" class="w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm" style="border-color: var(--border)">
+    </div>
+  </div>
+  <p class="text-xs" style="color: var(--ink-muted)">The two fields above are only used if "Enable a quick-add log" is checked.</p>
 </form>
 
 <div class="space-y-2">
   {% for aspect in aspects %}
-  <div class="sb-surface rounded-2xl p-4 border flex items-center gap-3">
-    <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {{ aspect.color_light }}"></span>
-    <form method="post" action="{{ url_for('settings.rename_aspect', aspect_id=aspect._id) }}" class="flex-1 flex gap-2">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="text" name="name" value="{{ aspect.name }}" class="flex-1 rounded-lg border bg-transparent px-2 py-1 text-sm" style="border-color: var(--border)">
-      <button type="submit" class="text-xs shrink-0" style="color: var(--ink-secondary)">Save</button>
-    </form>
-    <form method="post" action="{{ url_for('settings.delete_aspect', aspect_id=aspect._id) }}" onsubmit="return confirm('Delete this aspect and all of its metrics/entries?');">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="text-xs text-red-600">Delete</button>
-    </form>
+  <div class="sb-surface rounded-2xl p-4 border">
+    <div class="flex items-center gap-3">
+      <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {{ aspect.color_light }}"></span>
+      {% if aspect.transaction_config %}
+      <span class="text-xs px-2 py-0.5 rounded-full shrink-0" style="color: var(--ink-secondary); border: 1px solid var(--border)">{{ aspect.transaction_config.amount_label }} log</span>
+      {% endif %}
+      <form method="post" action="{{ url_for('settings.rename_aspect', aspect_id=aspect._id) }}" class="flex-1 flex gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="name" value="{{ aspect.name }}" class="flex-1 rounded-lg border bg-transparent px-2 py-1 text-sm" style="border-color: var(--border)">
+        <button type="submit" class="text-xs shrink-0" style="color: var(--ink-secondary)">Save</button>
+      </form>
+      <form method="post" action="{{ url_for('settings.delete_aspect', aspect_id=aspect._id) }}" onsubmit="return confirm('Delete this aspect and all of its metrics/entries/transactions?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="text-xs text-red-600">Delete</button>
+      </form>
+    </div>
+
+    <details class="mt-2">
+      <summary class="text-xs cursor-pointer select-none" style="color: var(--ink-muted)">Quick-add log settings</summary>
+      <form method="post" action="{{ url_for('settings.update_transaction_config', aspect_id=aspect._id) }}" class="mt-2 space-y-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="text-sm flex items-center gap-2" style="color: var(--ink-secondary)">
+          <input type="checkbox" name="enable_transactions" {% if aspect.transaction_config %}checked{% endif %}>
+          Enable a quick-add log for this aspect
+        </label>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <input type="text" name="amount_label" value="{{ aspect.transaction_config.amount_label if aspect.transaction_config else '' }}" placeholder="Amount" class="w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm" style="border-color: var(--border)">
+          <input type="text" name="categories" value="{{ aspect.transaction_config.categories | join(', ') if aspect.transaction_config else '' }}" placeholder="Gym, Sports, Others" class="w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm" style="border-color: var(--border)">
+        </div>
+        <button type="submit" class="text-xs rounded-lg px-3 py-1.5 text-white" style="background: {{ aspect.color_light }}">Save log settings</button>
+      </form>
+    </details>
   </div>
   {% else %}
   <p class="text-sm" style="color: var(--ink-muted)">No life aspects yet — add your first one above.</p>

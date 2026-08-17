@@ -32,6 +32,16 @@
       </div>
       <canvas id="spark-{{ card.aspect._id }}" width="120" height="40"></canvas>
     </div>
+    {% elif card.transaction_total is not none %}
+    <div class="flex items-end justify-between gap-3">
+      <div>
+        <div class="text-2xl font-semibold">{{ '%.2f'|format(card.transaction_total) }}
+          <span class="text-sm font-normal" style="color: var(--ink-muted)">{{ card.aspect.transaction_config.amount_label }}</span>
+        </div>
+        <div class="text-xs" style="color: var(--ink-muted)">Last 30 days</div>
+      </div>
+      <canvas id="spark-{{ card.aspect._id }}" width="120" height="40"></canvas>
+    </div>
     {% else %}
     <p class="text-sm" style="color: var(--ink-muted)">No metrics yet.</p>
     {% endif %}
@@ -43,7 +53,7 @@
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 <script>
   {% for card in cards %}
-  {% if card.headline %}
+  {% if card.series %}
   SecondBrain.sparkline("spark-{{ card.aspect._id }}", {{ card.series | tojson }}, "{{ card.aspect.color_light }}", "{{ card.aspect.color_dark }}");
   {% endif %}
   {% endfor %}
