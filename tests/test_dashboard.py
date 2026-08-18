@@ -43,6 +43,28 @@ def test_aspect_detail_shows_transaction_totals(logged_in_client, seeded):
     assert b"No entries yet for this period." in resp.data
 
 
+def test_editing_past_day_value_updates_aspect_detail_chart(logged_in_client, seeded, db):
+    from app.models.metrics import create_metric
+
+    metric = create_metric(db, seeded["aspect"]["_id"], "Mood", "number", "daily")
+    logged_in_client.post("/today", data={"date": "2026-08-10", f"metric_{metric['_id']}": "3"})
+    resp = logged_in_client.get("/aspects/finances")
+    assert b'"value": 3.0' in resp.data
+
+    logged_in_client.post("/today", data={"date": "2026-08-10", f"metric_{metric['_id']}": "42"})
+    resp = logged_in_client.get("/aspects/finances")
+    assert b'"value": 42.0' in resp.data
+    assert b'"value": 3.0' not in resp.data
+
+
+def test_weekly_metric_excluded_from_aspect_detail(logged_in_client, seeded, db):
+    from app.models.metrics import create_metric
+
+    create_metric(db, seeded["aspect"]["_id"], "Weekly mood", "number", "weekly")
+    resp = logged_in_client.get("/aspects/finances")
+    assert b"Weekly mood" not in resp.data
+
+
 def test_home_card_shows_transaction_total_for_aspect_without_metrics(logged_in_client, seeded, db):
     from app.models.life_aspects import create_aspect
 

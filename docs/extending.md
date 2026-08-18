@@ -74,26 +74,43 @@ migration script if existing data needs backfilling.
 ## Recipe: add a new metric type or cadence
 
 `METRIC_TYPES = ("number", "boolean", "rating")` and
-`CADENCES = ("daily", "monthly")` in `app/models/metrics.py` are the only
-places these are enumerated as constants, but the *rendering* of each type
-is hardcoded per-cadence in templates and routes:
+`CADENCES = ("daily", "weekly", "monthly")` in `app/models/metrics.py` are
+the only places these are enumerated as constants, but the *rendering* of
+each type/cadence is hardcoded per call site in templates and routes — there
+'s no single dispatch table, so grep for the existing enum values
+(`"boolean"`, `"rating"`, `"weekly"`) to find every place before adding a
+new one. Call sites as of the `weekly` cadence addition:
 
-- `app/blueprints/daily/routes.py::save_today` — parses `metric_<id>` form
-  field differently per `type` (checkbox for boolean, int for rating, float
-  otherwise).
+- `app/blueprints/daily/routes.py::save_today`/`today` — parses/renders
+  `metric_<id>` only for `cadence="daily"` metrics; a different `type`
+  changes the form-field parsing (checkbox for boolean, int for rating,
+  float otherwise) but not which cadence shows up here.
 - `app/templates/daily/today.html` — renders a different input widget per
   `type`.
-- `app/blueprints/reviews/routes.py` / `review_form.html` — monthly-cadence
-  metrics get an input field in the review form; daily-cadence metrics only
-  get an averaged summary.
+- `app/blueprints/reviews/routes.py::review`/`review_form.html` — the
+  monthly review. `cadence == "monthly"` metrics get an input field;
+  `cadence == "weekly"` metrics are explicitly skipped (`continue`) so they
+  never enter the per-metric chart/averages either; everything else
+  (`daily`) only gets the averaged summary.
+- `app/blueprints/reviews/routes.py::weekly_review`/
+  `weekly_review_form.html` — the weekly review, added alongside the
+  `weekly` cadence. `cadence == "weekly"` metrics get an input field here
+  and *only* here.
+- `app/blueprints/dashboard/routes.py::home`/`aspect_detail` — both filter
+  out `cadence == "weekly"` metrics (headline selection and per-metric
+  charts respectively) so a weekly metric never appears on the dashboard.
 - `app/analytics.py::status_for_metric` — only meaningful for numeric
   values with a `target`; extend the `isinstance` check if a new type
   should also support targets.
 
-Adding a new `type` or `cadence` means touching all of the above — there's
-no single dispatch table, so grep for the existing enum values
-(`"boolean"`, `"rating"`, `"monthly"`) to find every call site before
-adding a new one.
+**If you add a new cadence**, decide up front whether it should be globally
+visible (like `daily`/`monthly`, which show up in Today/dashboard/monthly
+review) or deliberately siloed to one surface (like `weekly`, which is
+invisible everywhere except its own review page) — then filter it out of
+every *other* call site explicitly, the way `weekly` is filtered out of
+`daily.today`, `dashboard.home`/`aspect_detail`, and
+`reviews.review`. Missing one of these filters is the easy way to leak a
+metric onto a page it shouldn't appear on.
 
 ## Recipe: schema/migration change
 

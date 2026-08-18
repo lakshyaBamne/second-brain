@@ -1,7 +1,7 @@
 from bson import ObjectId
 
 METRIC_TYPES = ("number", "boolean", "rating")
-CADENCES = ("daily", "monthly")
+CADENCES = ("daily", "weekly", "monthly")
 
 
 def list_metrics(db, aspect_id=None, cadence=None, active_only=True):

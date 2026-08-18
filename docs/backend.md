@@ -54,7 +54,7 @@ route function.
 | `auth` | `/` (`/login`, `/logout`) | Login/logout via Flask-Login |
 | `daily` | `/today` | Log today's (or any day's) metric values; add/delete quick-add transactions |
 | `dashboard` | `/` | Home overview (one card per aspect, sparkline of its headline metric) + per-aspect detail with range-filtered charts |
-| `reviews` | `/reviews` | List + fill out monthly reviews (reflection prompts, monthly metric inputs, transaction category totals) |
+| `reviews` | `/reviews` | List + fill out monthly and weekly reviews (reflection prompts, cadence-matched metric inputs, transaction category totals on the monthly page) |
 | `settings` | `/settings` | CRUD for life aspects (incl. `transaction_config`) and metrics (incl. archive/reactivate) |
 
 Notable route-level patterns:
@@ -66,21 +66,53 @@ Notable route-level patterns:
   aspects again and, per aspect, both upserts metric entries and inserts any
   staged transactions (`txn_count_<aspect_id>` + indexed `txn_<aspect_id>_<i>_<field>`
   form fields — see [`frontend.md`](frontend.md#transaction-quick-add-js)
-  for how the JS stages those before submit).
-- **`reviews.review` (GET/POST)** computes, per aspect, this-month vs.
-  last-month averages for every metric and (if `transaction_config` is set)
+  for how the JS stages those before submit). `_parse_date` defaults to
+  today but accepts a `?date=` query param, so viewing/editing any past
+  day's log is just navigating there (the template's prev/next arrows and
+  date-picker input both do this) — upserting on the same `(metric_id,
+  date)` means re-saving a past day overwrites rather than duplicates, and
+  every other page (dashboard, reviews) reads `entries` live, so an edit to
+  a past day is reflected everywhere immediately with no cache to bust.
+- **`daily.delete_transaction` (POST)** deletes one transaction and redirects
+  back to `?date=<the day it was on>`. Its button lives inside the *same*
+  outer form as everything else on the page via `formaction`/`formmethod`,
+  not a separate nested `<form>` — see
+  [`frontend.md#never-nest-a-form-inside-another-form`](frontend.md#never-nest-a-form-inside-another-form)
+  for why that distinction matters (it was a real, hard-to-spot bug).
+- **`reviews.history` (GET)** builds one card per month (always including
+  the current month, plus any month with a saved monthly or weekly review)
+  in reverse-chronological order, each holding 4 week sub-cards + 1 month
+  sub-card computed via `_week_bounds`/`_week_num_for_day`
+  (see [`database.md#reviews`](database.md#reviews) for the week-bucket
+  scheme). The current month and current week are flagged `is_current` for
+  the template to highlight.
+- **`reviews.review` (GET/POST)** — the monthly review. Computes, per
+  aspect, this-month vs. last-month averages for every **non-weekly**
+  metric (`cadence == "weekly"` metrics are skipped entirely so they never
+  leak into the monthly chart) and, if `transaction_config` is set,
   this-month vs. last-month totals per category
   (`transactions_model.totals_by_category`). POST saves free-text
   reflections and any monthly-cadence metric values in one upsert.
+- **`reviews.weekly_review` (GET/POST)**, at `/reviews/<period>/week/<1-4>`
+  — the weekly counterpart. Same reflection-prompt shape (different
+  wording, `WEEKLY_PROMPTS`) plus an input field per `cadence == "weekly"`
+  metric for that aspect; nothing else (no charts, no transaction rollup —
+  keep it lightweight). This is the *only* place a weekly-cadence metric's
+  value can be entered or displayed.
 - **`settings._parse_transaction_config(form)`** is the single place that
   turns raw form input into a `transaction_config` dict (or `None`) —
   reused by both "create aspect" and "update transaction config" POST
   handlers. If you add a new form that can set/edit this field, reuse this
   helper rather than re-parsing.
-- **`dashboard.home`** picks each aspect's *first* metric
-  (`metrics_model.list_metrics(...)[0]`, ordered by `order`) as its
-  "headline" metric for the summary card — there's no explicit
-  "primary metric" flag, order in the metrics list decides it.
+- **`dashboard.home`** picks each aspect's *first non-weekly* metric
+  (filtered then indexed `[0]`, ordered by `order`) as its "headline" metric
+  for the summary card — there's no explicit "primary metric" flag, order in
+  the metrics list decides it. `dashboard.aspect_detail`'s per-metric chart
+  loop applies the same `cadence != "weekly"` filter.
+- **`settings.edit_metric` (POST)** rewrites all of a metric's editable
+  fields (`name`/`type`/`cadence`/`unit`/`target`) in one `$set` via
+  `metrics_model.update_metric` — the only settings route that lets you
+  change a metric after creation instead of archiving and re-adding it.
 
 ## Models (`app/models/*.py`)
 
@@ -97,7 +129,7 @@ manages.
 | `metrics.py` | `metrics` collection; `METRIC_TYPES`/`CADENCES` constants, archive/reactivate (soft delete) |
 | `entries.py` | `entries` collection; `day_key`/`month_key` date normalization — **always** go through these before querying/writing |
 | `transactions.py` | `transactions` collection; `totals_by_category` powers the review-page rollup |
-| `reviews.py` | `reviews` collection; one upsert per `(period_type, period_start)` |
+| `reviews.py` | `reviews` collection; cadence-agnostic — `get_review`/`upsert_review`/`list_reviews` all take `period_type` (`"monthly"` or `"weekly"`), one upsert per `(period_type, period_start)` |
 
 When adding a model function, match the existing signature style: take
 `db` first, take an `_id` as a plain string or `ObjectId` (model functions

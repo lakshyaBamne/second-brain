@@ -102,6 +102,31 @@ def metrics():
     )
 
 
+@settings_bp.route("/metrics/<metric_id>/edit", methods=["POST"])
+@login_required
+def edit_metric(metric_id):
+    db = current_app.db
+    name = request.form.get("name", "").strip()
+    type_ = request.form.get("type")
+    cadence = request.form.get("cadence")
+    unit = request.form.get("unit", "").strip()
+
+    target = None
+    target_value = request.form.get("target_value")
+    target_direction = request.form.get("target_direction")
+    if target_value and target_direction:
+        target = {"value": float(target_value), "direction": target_direction}
+
+    if name and type_ in metrics_model.METRIC_TYPES and cadence in metrics_model.CADENCES:
+        metrics_model.update_metric(
+            db,
+            metric_id,
+            {"name": name, "type": type_, "cadence": cadence, "unit": unit, "target": target},
+        )
+        flash(f'Updated metric "{name}".', "success")
+    return redirect(url_for("settings.metrics"))
+
+
 @settings_bp.route("/metrics/<metric_id>/archive", methods=["POST"])
 @login_required
 def archive_metric(metric_id):

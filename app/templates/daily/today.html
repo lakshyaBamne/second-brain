@@ -6,6 +6,9 @@
     <a href="{{ url_for('daily.today', date=prev_date.isoformat()) }}" style="color: var(--ink-secondary)">&larr;</a>
     <span class="font-semibold">{{ the_date.strftime('%A, %B %d, %Y') }}{% if the_date == today %} (Today){% endif %}</span>
     <a href="{{ url_for('daily.today', date=next_date.isoformat()) }}" style="color: var(--ink-secondary)">&rarr;</a>
+    <input type="date" value="{{ the_date.isoformat() }}"
+           onchange="if (this.value) window.location.href = '{{ url_for('daily.today') }}?date=' + this.value"
+           class="rounded-lg border bg-transparent px-2 py-1 text-xs" style="border-color: var(--border); color-scheme: light dark">
   </div>
   {% if total %}<span class="text-sm" style="color: var(--ink-secondary)">{{ logged }}/{{ total }} logged</span>{% endif %}
 </div>
@@ -62,11 +65,9 @@
           </div>
           <span class="text-xs px-2 py-0.5 rounded-full shrink-0" style="color: var(--ink-secondary); border: 1px solid var(--border)">{{ txn.category }}</span>
           <span class="font-medium shrink-0">{{ '%.2f'|format(txn.amount) }}</span>
-          <form method="post" action="{{ url_for('daily.delete_transaction', transaction_id=txn._id) }}" class="shrink-0">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="date" value="{{ the_date.isoformat() }}">
-            <button type="submit" class="text-sm leading-none" style="color: var(--ink-muted)" aria-label="Delete transaction">&times;</button>
-          </form>
+          <button type="submit" formaction="{{ url_for('daily.delete_transaction', transaction_id=txn._id) }}"
+                  formmethod="post" formnovalidate class="text-sm leading-none shrink-0" style="color: var(--ink-muted)"
+                  aria-label="Delete transaction">&times;</button>
         </div>
         {% endfor %}
       </div>

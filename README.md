@@ -1,9 +1,13 @@
 # Second Brain — v1.0.0
 
-Personal growth tracker: daily entries roll up into monthly reviews, per life
-aspect. See `project-prompt-v1.0.0.md` for the original goals and the design
-doc this was built from (Flask + MongoDB + Tailwind, lean MVP scoped to a
-single life aspect — Finances — end to end).
+Personal growth tracker: daily entries roll up into weekly and monthly
+reviews, per life aspect. See `project-prompt-v1.0.0.md` for the original
+goals and the design doc this was built from (Flask + MongoDB + Tailwind,
+lean MVP scoped to a single life aspect — Finances — end to end).
+
+**New to using the app?** See [`docs/user-guide.md`](docs/user-guide.md) —
+what life aspects/metrics/reviews are for and how to get the most out of
+them. This README is about running and developing the project.
 
 ## Stack
 
@@ -56,6 +60,10 @@ connection is needed to run them.
 
 Settings → Life aspects / Metrics — no code changes needed. New aspects are
 assigned the next color in a validated, colorblind-safe palette automatically.
+Metrics can be daily, weekly, or monthly and edited in place afterward
+(name/type/cadence/unit/target) without losing their logged history — see
+[`docs/user-guide.md`](docs/user-guide.md) for how to pick a cadence and
+what each metric type/target does.
 
 Check "Enable a quick-add log" when adding an aspect (or later, via each
 aspect's "Quick-add log settings") to give it its own add-a-transaction

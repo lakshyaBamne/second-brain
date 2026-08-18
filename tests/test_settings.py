@@ -24,6 +24,48 @@ def test_add_metric(logged_in_client, seeded, db):
     assert db.metrics.find_one({"name": "Net worth"}) is not None
 
 
+def test_add_metric_with_weekly_cadence(logged_in_client, seeded, db):
+    aspect_id = str(seeded["aspect"]["_id"])
+    logged_in_client.post(
+        "/settings/metrics",
+        data={"aspect_id": aspect_id, "name": "Weekly mood", "type": "number", "cadence": "weekly"},
+        follow_redirects=True,
+    )
+    doc = db.metrics.find_one({"name": "Weekly mood"})
+    assert doc is not None
+    assert doc["cadence"] == "weekly"
+
+
+def test_edit_metric_updates_fields(logged_in_client, seeded, db):
+    metric_id = str(seeded["monthly_metric"]["_id"])
+    logged_in_client.post(
+        f"/settings/metrics/{metric_id}/edit",
+        data={
+            "name": "Net worth",
+            "type": "number",
+            "cadence": "monthly",
+            "unit": "USD",
+            "target_value": "1000",
+            "target_direction": "at_least",
+        },
+        follow_redirects=True,
+    )
+    doc = db.metrics.find_one({"_id": seeded["monthly_metric"]["_id"]})
+    assert doc["name"] == "Net worth"
+    assert doc["unit"] == "USD"
+    assert doc["target"] == {"value": 1000.0, "direction": "at_least"}
+
+
+def test_edit_metric_can_change_cadence(logged_in_client, seeded, db):
+    metric_id = str(seeded["monthly_metric"]["_id"])
+    logged_in_client.post(
+        f"/settings/metrics/{metric_id}/edit",
+        data={"name": "In-hand money", "type": "number", "cadence": "weekly", "unit": "currency"},
+    )
+    doc = db.metrics.find_one({"_id": seeded["monthly_metric"]["_id"]})
+    assert doc["cadence"] == "weekly"
+
+
 def test_archive_metric_hides_it_from_daily_form(logged_in_client, seeded, db):
     aspect_id = str(seeded["aspect"]["_id"])
     logged_in_client.post(

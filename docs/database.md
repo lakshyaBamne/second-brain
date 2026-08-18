@@ -53,17 +53,25 @@ Index: `slug` unique. Managed by `app/models/life_aspects.py`.
   aspect_id: ObjectId,        # -> life_aspects
   name: str,
   type: "number" | "boolean" | "rating",
-  cadence: "daily" | "monthly",
+  cadence: "daily" | "weekly" | "monthly",
   unit: str,
   target: { value: float, direction: "at_least" | "at_most" } | null,
   active: bool,                # soft-delete flag; false = archived
-  order: int,                  # insertion order within the aspect; [0] is the dashboard "headline" metric
+  order: int,                  # insertion order within the aspect; [0] is the dashboard "headline" metric (skipping any weekly-cadence metric)
 }
 ```
 No index beyond the default `_id`. Managed by `app/models/metrics.py`.
 `archive_metric`/`reactivate_metric` toggle `active` rather than deleting,
 so historical `entries` stay intact and queryable even after a metric is
 retired.
+
+`weekly`-cadence metrics are deliberately invisible everywhere except the
+weekly review form: the Today page only ever queries `cadence="daily"`, the
+monthly review skips `cadence == "weekly"` when building its per-metric
+chart/averages, and the dashboard (home headline + aspect-detail charts)
+filters them out too. Their one entry per week is written/read at the
+week-bucket's `period_start` (see `reviews` below), the same way a
+monthly-cadence metric's single entry lives at the month's `period_start`.
 
 ### `entries`
 
@@ -113,8 +121,9 @@ function only sums into the categories passed to it).
 ```
 {
   _id: ObjectId,
-  period_type: "monthly",             # only value in use; quarterly/annual are out of scope for v1 (see project-prompt-v1.0.0.md)
-  period_start: datetime,              # month_key()-normalized, first of the month
+  period_type: "monthly" | "weekly",   # quarterly/annual are out of scope for v1 (see project-prompt-v1.0.0.md)
+  period_start: datetime,              # "monthly": month_key()-normalized, first of the month
+                                        # "weekly": first day of a 4-bucket-per-month week (see below)
   aspect_reflections: [
     { aspect_id: ObjectId, highlights: str, lowlights: str, focus_next: str }, ...
   ],
@@ -122,9 +131,20 @@ function only sums into the categories passed to it).
 }
 ```
 Index: `(period_type, period_start)` unique. Managed by
-`app/models/reviews.py`. One document per calendar month, upserted on every
-save (`reviews.review` POST handler) — editing a past review overwrites the
-whole `aspect_reflections` array, it isn't append-only.
+`app/models/reviews.py`, which is cadence-agnostic — every function
+(`get_review`/`upsert_review`/`list_reviews`) takes `period_type` explicitly
+rather than assuming `"monthly"`. One document per period, upserted on every
+save (`reviews.review` / `reviews.weekly_review` POST handlers) — editing a
+past review overwrites the whole `aspect_reflections` array, it isn't
+append-only.
+
+**Weeks are not calendar (Mon–Sun) weeks.** Each month is split into exactly
+4 fixed buckets so a month card always shows 4 weeks, regardless of what
+weekday the 1st falls on: days 1–7, 8–14, 15–21, and 22–end-of-month (the
+last bucket is 7–10 days depending on month length). See
+`reviews/routes.py::_week_bounds`/`_week_num_for_day`. A weekly review's
+`period_start` is that bucket's first day as a plain `datetime` (e.g. week 3
+of August 2026 is `datetime(2026, 8, 15)`).
 
 ## Entity relationships
 

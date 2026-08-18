@@ -31,7 +31,7 @@ app/
     auth/routes.py      # /login, /logout
     daily/routes.py      # /today — daily metric entry + quick-add transactions
     dashboard/routes.py  # / and /aspects/<slug> — overview + per-aspect charts
-    reviews/routes.py    # /reviews — monthly review read/write
+    reviews/routes.py    # /reviews — monthly + weekly review read/write, review history
     settings/routes.py   # /settings/aspects, /settings/metrics — CRUD/config UI
   models/
     users.py, life_aspects.py, metrics.py, entries.py, transactions.py, reviews.py

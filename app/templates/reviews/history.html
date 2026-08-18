@@ -1,23 +1,48 @@
 {% extends "base.html" %}
 {% block title %}Reviews — Second Brain{% endblock %}
 {% block content %}
-<div class="flex items-center justify-between mb-4">
-  <h1 class="text-lg font-semibold">Monthly reviews</h1>
-  <a href="{{ url_for('reviews.review', period=current_month.strftime('%Y-%m')) }}" class="text-sm rounded-lg px-3 py-1.5 text-white" style="background: #2a78d6">
-    This month's review
-  </a>
+<h1 class="text-lg font-semibold mb-4">Reviews</h1>
+
+{% macro week_card(month_period, week) %}
+<a href="{{ url_for('reviews.weekly_review', period=month_period, week_num=week.num) }}"
+   class="rounded-xl border p-3 text-sm block"
+   style="border-color: {{ '#2a78d6' if week.is_current else 'var(--border)' }}; {% if week.is_current %}border-width: 2px;{% endif %}">
+  <div class="font-medium flex items-center gap-1.5">
+    Week {{ week.num }}
+    {% if week.is_current %}<span class="text-[10px] rounded-full px-1.5 py-0.5 text-white" style="background: #2a78d6">Current</span>{% endif %}
+  </div>
+  <div class="text-xs mt-0.5" style="color: var(--ink-muted)">{{ week.start.strftime('%b %d') }} – {{ week.end.strftime('%b %d') }}</div>
+  {% if week.completed %}<div class="text-xs mt-1" style="color: var(--ink-secondary)">Completed</div>{% endif %}
+</a>
+{% endmacro %}
+
+{% macro month_card(card) %}
+<div class="sb-surface rounded-2xl p-5 border" style="{% if card.is_current %}border-color: #2a78d6; border-width: 2px;{% endif %}">
+  <div class="flex items-center gap-2 mb-3">
+    <div class="font-medium">{{ card.month_start.strftime('%B %Y') }}</div>
+    {% if card.is_current %}<span class="text-xs rounded-full px-2 py-0.5 text-white" style="background: #2a78d6">Current month</span>{% endif %}
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+    {% for week in card.weeks %}
+      {{ week_card(card.month_start.strftime('%Y-%m'), week) }}
+    {% endfor %}
+    <a href="{{ url_for('reviews.review', period=card.month_start.strftime('%Y-%m')) }}" class="rounded-xl border p-3 text-sm block" style="border-color: var(--border)">
+      <div class="font-medium">Month</div>
+      <div class="text-xs mt-0.5" style="color: var(--ink-muted)">Full review</div>
+      {% if card.month_completed %}<div class="text-xs mt-1" style="color: var(--ink-secondary)">Completed</div>{% endif %}
+    </a>
+  </div>
 </div>
-{% if not reviews %}
-<div class="sb-surface rounded-2xl p-6 border text-sm" style="color: var(--ink-secondary)">
-  No reviews yet.
-</div>
-{% else %}
-<div class="space-y-3">
-  {% for r in reviews %}
-  <a href="{{ url_for('reviews.review', period=r.period_start.strftime('%Y-%m')) }}" class="sb-surface rounded-2xl p-4 border block">
-    <div class="font-medium">{{ r.period_start.strftime('%B %Y') }}</div>
-    <div class="text-xs" style="color: var(--ink-muted)">Completed {{ r.completed_at.strftime('%b %d, %Y') }}</div>
-  </a>
+{% endmacro %}
+
+{% if current_card %}
+{{ month_card(current_card) }}
+{% endif %}
+
+{% if other_cards %}
+<div class="space-y-3 mt-4">
+  {% for card in other_cards %}
+  {{ month_card(card) }}
   {% endfor %}
 </div>
 {% endif %}

@@ -32,8 +32,8 @@ Each test file corresponds roughly to one blueprint/feature area:
 | `test_auth.py` | login/logout |
 | `test_daily.py` | Today page: metric entry, transaction add/delete |
 | `test_dashboard.py` | dashboard summary cards |
-| `test_reviews.py` | monthly review read/write, metric + transaction rollups |
-| `test_settings.py` | aspect/metric CRUD, archive/reactivate |
+| `test_reviews.py` | monthly + weekly review read/write, review history cards, metric + transaction rollups |
+| `test_settings.py` | aspect/metric CRUD, edit, archive/reactivate |
 | `test_transaction_config.py` | the configurable (non-Finances) transaction log — custom `amount_label`/`categories` per aspect, e.g. a "Health" aspect tracking Gym/Sports/Others in hours |
 
 ## Conventions to follow when adding tests

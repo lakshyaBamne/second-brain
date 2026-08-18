@@ -52,20 +52,30 @@ derived data (sparklines, on-track status) for the dashboard.
   (Finances, Health, ...), each with a slug, an assigned color (see below),
   and an optional `transaction_config`.
 - `metrics` (`app/models/metrics.py`) — trackable values under an aspect.
-  `type` is `number`/`boolean`/`rating`; `cadence` is `daily`/`monthly`.
-  Metrics can be archived (soft-deleted via `active: False`) rather than
-  deleted, to preserve history.
+  `type` is `number`/`boolean`/`rating`; `cadence` is
+  `daily`/`weekly`/`monthly`. Metrics can be archived (soft-deleted via
+  `active: False`) rather than deleted, to preserve history. `weekly`
+  metrics are deliberately invisible everywhere except their weekly review
+  page — filtered out of Today, the dashboard, and the monthly review.
 - `entries` (`app/models/entries.py`) — one value per `(metric_id, date)`,
   upserted. `date` is always normalized to midnight via `day_key`/`month_key`
   before querying/writing — always go through these helpers rather than
-  passing raw `date`/`datetime` objects.
+  passing raw `date`/`datetime` objects. A weekly metric's single
+  per-period entry lives at its week-bucket's start date, the same pattern
+  monthly metrics use with `month_key`.
 - `transactions` (`app/models/transactions.py`) — free-form
   name/description/amount/category log entries under an aspect, only used
   when that aspect's `transaction_config` is set (the "quick-add log"
   feature). Categories are per-aspect custom strings, not a fixed enum.
-- `reviews` (`app/models/reviews.py`) — one monthly document keyed by
-  `(period_type, period_start)`, holding per-aspect reflection text plus
-  whatever monthly metrics were filled in for that period.
+- `reviews` (`app/models/reviews.py`) — one document per period keyed by
+  `(period_type, period_start)`, `period_type` is `"monthly"` or `"weekly"`,
+  holding per-aspect reflection text plus whatever cadence-matched metrics
+  were filled in for that period. A month is split into 4 fixed weekly
+  buckets (days 1–7/8–14/15–21/22–end, not calendar Mon–Sun weeks) — see
+  `reviews/routes.py::_week_bounds`. The Reviews page shows the current
+  month as its own card (current week highlighted) plus past months below
+  in reverse-chronological order, each with 4 week sub-cards + 1 month
+  sub-card.
 - `users` (`app/models/users.py`) — Flask-Login `UserMixin` wrapper around a
   `users` doc; single-user-oriented (no roles/permissions).
 
@@ -97,7 +107,12 @@ metrics to preserve history.
 
 **Templates**: server-rendered Jinja2 (`app/templates/`), Tailwind via CDN
 class names, no build step. Chart.js (CDN) renders sparklines/charts from
-JSON series data computed in `app/analytics.py`/route handlers.
+JSON series data computed in `app/analytics.py`/route handlers. **Never nest
+a `<form>` inside another `<form>`** (e.g. a delete button inside a page-wide
+form) — browsers silently truncate the outer form at the nested one's
+closing tag, breaking everything after it with no console error. Give the
+button its own `formaction`/`formmethod` instead; see
+`docs/frontend.md#never-nest-a-form-inside-another-form`.
 
 ## Testing conventions
 

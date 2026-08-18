@@ -40,21 +40,46 @@
   </div>
   <div class="space-y-2">
     {% for metric in group.metrics %}
-    <div class="sb-surface rounded-2xl p-3 border flex items-center gap-3 {{ 'opacity-50' if not metric.active else '' }}">
-      <div class="flex-1">
-        <div class="text-sm font-medium">{{ metric.name }} <span class="text-xs font-normal" style="color: var(--ink-muted)">{{ metric.type }} · {{ metric.cadence }}{% if metric.unit %} · {{ metric.unit }}{% endif %}</span></div>
+    <div class="sb-surface rounded-2xl p-3 border {{ 'opacity-50' if not metric.active else '' }}">
+      <div class="flex items-center gap-3">
+        <div class="flex-1">
+          <div class="text-sm font-medium">{{ metric.name }} <span class="text-xs font-normal" style="color: var(--ink-muted)">{{ metric.type }} · {{ metric.cadence }}{% if metric.unit %} · {{ metric.unit }}{% endif %}</span></div>
+        </div>
+        {% if metric.active %}
+        <form method="post" action="{{ url_for('settings.archive_metric', metric_id=metric._id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="text-xs" style="color: var(--ink-secondary)">Archive</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('settings.reactivate_metric', metric_id=metric._id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="text-xs" style="color: var(--ink-secondary)">Reactivate</button>
+        </form>
+        {% endif %}
       </div>
-      {% if metric.active %}
-      <form method="post" action="{{ url_for('settings.archive_metric', metric_id=metric._id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="text-xs" style="color: var(--ink-secondary)">Archive</button>
-      </form>
-      {% else %}
-      <form method="post" action="{{ url_for('settings.reactivate_metric', metric_id=metric._id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="text-xs" style="color: var(--ink-secondary)">Reactivate</button>
-      </form>
-      {% endif %}
+      <details class="mt-2">
+        <summary class="text-xs cursor-pointer" style="color: var(--ink-secondary)">Edit</summary>
+        <form method="post" action="{{ url_for('settings.edit_metric', metric_id=metric._id) }}" class="grid gap-2 sm:grid-cols-2 mt-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="text" name="name" value="{{ metric.name }}" required class="rounded-lg border bg-transparent px-3 py-2 text-sm" style="border-color: var(--border)">
+          <select name="type" required class="rounded-lg border bg-transparent px-3 py-2 text-sm" style="border-color: var(--border)">
+            {% for t in types %}<option value="{{ t }}" {{ 'selected' if t == metric.type else '' }}>{{ t|capitalize }}</option>{% endfor %}
+          </select>
+          <select name="cadence" required class="rounded-lg border bg-transparent px-3 py-2 text-sm" style="border-color: var(--border)">
+            {% for c in cadences %}<option value="{{ c }}" {{ 'selected' if c == metric.cadence else '' }}>{{ c|capitalize }}</option>{% endfor %}
+          </select>
+          <input type="text" name="unit" value="{{ metric.unit or '' }}" placeholder="Unit (optional)" class="rounded-lg border bg-transparent px-3 py-2 text-sm" style="border-color: var(--border)">
+          <div class="flex gap-2 sm:col-span-2">
+            <input type="number" step="any" name="target_value" value="{{ metric.target.value if metric.target else '' }}" placeholder="Target (optional)" class="flex-1 rounded-lg border bg-transparent px-3 py-2 text-sm" style="border-color: var(--border)">
+            <select name="target_direction" class="rounded-lg border bg-transparent px-3 py-2 text-sm" style="border-color: var(--border)">
+              <option value="">—</option>
+              <option value="at_least" {{ 'selected' if metric.target and metric.target.direction == 'at_least' else '' }}>At least</option>
+              <option value="at_most" {{ 'selected' if metric.target and metric.target.direction == 'at_most' else '' }}>At most</option>
+            </select>
+          </div>
+          <button type="submit" class="sm:col-span-2 rounded-lg py-1.5 text-sm font-medium text-white" style="background: #2a78d6">Save changes</button>
+        </form>
+      </details>
     </div>
     {% else %}
     <p class="text-sm" style="color: var(--ink-muted)">No metrics yet.</p>

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Week {{ week_num }}, {{ month_start.strftime('%B %Y') }} — Second Brain{% endblock %}
+{% block content %}
+<div class="mb-4">
+  <a href="{{ url_for('reviews.history') }}" class="text-sm" style="color: var(--ink-secondary)">&larr; Reviews</a>
+  <h1 class="text-lg font-semibold mt-1">Week {{ week_num }} review <span class="text-sm font-normal" style="color: var(--ink-muted)">{{ week_start.strftime('%b %d') }} – {{ week_end.strftime('%b %d, %Y') }}</span></h1>
+</div>
+
+<form method="post" class="space-y-6">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% for section in aspect_sections %}
+  <div class="sb-surface rounded-2xl p-5 border">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="w-2.5 h-2.5 rounded-full" style="background: {{ section.aspect.color_light }}"></span>
+      <h2 class="font-semibold">{{ section.aspect.name }}</h2>
+    </div>
+
+    {% if section.weekly_inputs %}
+    <div class="grid gap-3 sm:grid-cols-2 mb-4">
+      {% for input in section.weekly_inputs %}
+      <div class="flex items-center justify-between gap-3">
+        <label class="text-sm">{{ input.metric.name }}{% if input.metric.unit %} <span style="color: var(--ink-muted)">({{ input.metric.unit }})</span>{% endif %}</label>
+        <input type="number" step="any" name="metric_{{ input.metric._id }}" value="{{ input.value if input.value is not none else '' }}" class="w-32 rounded-lg border bg-transparent px-3 py-1.5 text-right" style="border-color: var(--border)">
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="space-y-3">
+      {% for key, label in prompts %}
+      <div>
+        <label class="block text-sm mb-1" style="color: var(--ink-secondary)">{{ label }}</label>
+        <textarea name="{{ key }}_{{ section.aspect._id }}" rows="2" class="w-full rounded-lg border bg-transparent px-3 py-2 text-sm" style="border-color: var(--border)">{{ section.existing.get(key, '') }}</textarea>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endfor %}
+  <button type="submit" class="w-full rounded-lg py-2.5 font-medium text-white" style="background: #2a78d6">Save review</button>
+</form>
+{% endblock %}

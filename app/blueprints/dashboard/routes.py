@@ -31,7 +31,9 @@ def home():
     db = current_app.db
     cards = []
     for aspect in life_aspects.list_aspects(db):
-        aspect_metrics = metrics_model.list_metrics(db, aspect_id=aspect["_id"])
+        aspect_metrics = [
+            m for m in metrics_model.list_metrics(db, aspect_id=aspect["_id"]) if m["cadence"] != "weekly"
+        ]
         headline = aspect_metrics[0] if aspect_metrics else None
         card = {"aspect": aspect, "headline": headline, "series": [], "status": None, "latest": None, "transaction_total": None}
         if headline:
@@ -60,6 +62,8 @@ def aspect_detail(slug):
 
     metric_charts = []
     for metric in metrics_model.list_metrics(db, aspect_id=aspect["_id"]):
+        if metric["cadence"] == "weekly":
+            continue
         docs = entries_model.entries_for_metric(db, metric["_id"], start=start)
         metric_charts.append(
             {

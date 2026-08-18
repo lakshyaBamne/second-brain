@@ -13,13 +13,14 @@ Server-rendered Jinja2, one subdirectory per blueprint plus `base.html`:
 templates/
   base.html                    # layout: nav, flash messages, CDN script tags, CSS variables
   auth/login.html
-  daily/today.html             # metric inputs + quick-add transaction UI
+  daily/today.html             # metric inputs + quick-add transaction UI + date picker
   dashboard/home.html          # per-aspect summary cards + sparklines
   dashboard/aspect_detail.html # per-metric charts, range-filterable
-  reviews/history.html
-  reviews/review_form.html
+  reviews/history.html         # current month (+ current week) highlighted, past months below
+  reviews/review_form.html     # monthly review
+  reviews/weekly_review_form.html # weekly review — no charts, weekly-cadence metric inputs only
   settings/aspects.html        # aspect CRUD + transaction_config form
-  settings/metrics.html        # metric CRUD, archive/reactivate
+  settings/metrics.html        # metric CRUD (incl. inline edit), archive/reactivate
 ```
 
 Every page-level template `{% extends "base.html" %}` and fills
@@ -59,6 +60,37 @@ this will 400 on submit. Tests disable CSRF via
 `WTF_CSRF_ENABLED: False` in `config_overrides` (see
 [`testing.md`](testing.md)), so a missing token won't be caught by tests
 unless you specifically re-enable CSRF for that test.
+
+### Never nest a `<form>` inside another `<form>`
+
+`daily/today.html` wraps the *entire* page (every metric input, every
+transaction-staging block, and the "Save today's entries" button) in one
+`<form>`. Each transaction's delete "×" needs to POST somewhere else
+(`daily.delete_transaction`), and it used to do that with its own nested
+`<form>` — which is invalid HTML. Per the HTML parsing spec, a browser
+silently *ignores* a `<form>` open tag encountered while already inside a
+form, but its matching `</form>` still closes the real outer form. The bug
+this caused: the page rendered fine and "Save today's entries" worked right
+up until the first transaction existed — then the outer form was silently
+truncated at that transaction's delete button, and everything after it
+(including the Save button, and that aspect's own "+" add-transaction
+fields, which sit later in the same block) fell outside any form and
+stopped doing anything on click. It looked like intermittent JS breakage;
+it was actually a parser artifact with no error in the console.
+
+**The fix, and the pattern to reuse**: give the button its own
+`formaction`/`formmethod` attributes instead of wrapping it in a form —
+```html
+<button type="submit" formaction="{{ url_for('daily.delete_transaction', transaction_id=txn._id) }}"
+        formmethod="post" formnovalidate>&times;</button>
+```
+This submits the *entire* enclosing form (so it already carries the shared
+`csrf_token`/`date` hidden fields — no need to duplicate them) to a
+different endpoint than the form's default action. Reach for this any time
+a page needs more than one POST target inside what should be a single form;
+never reach for a nested `<form>`. A quick regression check for this class
+of bug: the rendered page should contain exactly one `<form` inside
+`<main>` (see `tests/test_daily.py::test_transaction_delete_control_does_not_nest_a_form`).
 
 ## Static JS (`app/static/js/`)
 
@@ -103,6 +135,17 @@ How it works (`app/static/js/transactions.js`):
 There's no client-side validation beyond requiring a non-empty name and
 amount before staging a row — category correctness and numeric parsing are
 enforced server-side in `save_today`.
+
+### Today page date navigation
+
+`daily/today.html` offers three ways to change which day you're viewing:
+prev/next arrows (±1 day), and an `<input type="date">` picker that jumps
+straight to any date via `onchange="window.location.href = ... + this.value"`
+(inline, no separate JS file — it's a one-liner). All three are just plain
+navigation to `/today?date=YYYY-MM-DD`; there's no client-side state, so
+editing a past day's values works exactly like editing today's — the
+pre-filled form is populated server-side from `entries_for_metrics_on` for
+whatever `the_date` the route resolved (see `daily.today`/`_parse_date`).
 
 ## Adding a new page
 
